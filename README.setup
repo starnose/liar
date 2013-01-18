@@ -65,6 +65,8 @@ Start liar like so -
 
 python dnsliar.py -r ca.cer -k ca.key -t tmpl.txt -c browsercas.pem -i mybr -a 10.1.1.50 -d ./certs -p 80 -s 443 -s 576 -u 10576
 
+Then point the DNS details for the machine you want to examine at the IP address
+of the machine Liar is running on.
 
 You can add as many -p -s and -u terms as you like for more ports.
 
@@ -88,4 +90,4 @@ change stuff like (for instance) HTTP headers on the fly. However they will
 be applied to ALL TCP traffic, encrypted or not, so use with caution.
 
 The '-n' switch is provided for situations where editing is the primary
-requirement, and switches off all logging.
+requirement and switches off all logging.
