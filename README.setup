@@ -1,0 +1,91 @@
+-------------------------------------------------------------------------------
+How to get going with Liar -
+-------------------------------------------------------------------------------
+
+I've only run liar on linux systems. It may work on other UNIX (I have no clue)
+And it just plain won't work on Windows.
+
+1. You're going to need to run this as root. This is because Liar brings up new
+network interfaces by the ton, one for each server encountered.
+
+2. You'll need to generate a root certificate and key using something like
+OpenSSL's CA.sh/CA.pl sample tools, or gnutls' certtool. This isn't that tricky
+and should be documented all over the web, I'll leave it as an exercise for the
+reader.
+
+3. You need to get the certificate for your new CA onto the machine you want to
+monitor, and into its CA store. Again, this is an exercise for the reader and
+will be different in every situation
+
+4. Make sure certtool is installed (part of gnutls), Liar uses it directly
+
+5. (Optional) If you want liar to validate its outbound connections
+(and therefore resist being the target of MITM attacks) you'll need a list of
+the CA public certs to use. This can be obtained from the semi-compromised device
+itself or you can grab one from somewhere. The cURL project seem to maintain
+a fairly up to date list of browser CAs in PEM format, generated from the mozilla
+root CA list at http://curl.haxx.se/ca/cacert.pem
+
+6. (Optional or use the default) Take a look in tmpl.txt, this the gnutls
+certificate generation template. Do not change the SERVERNAME or SERVERSERIAL
+fields, Liar will fill these in itself when it generates server certs. If you
+need specific stuff in fields other than Common Name and Serial, this is the
+place to set them up. They usually don't matter though.
+
+7. Figure out which ports you want to watch. Because liar works directly with
+sockets at the Transport layer rather than getting lower into the networking
+stack and having any intelligence, it only listens and logs on sockets you tell
+it. Common ones are 80 (http), 443 (https) etc. You'll also need to tell it
+which ports are encrypted.
+
+When I was using liar extensively I worked this stuff out by attaching the
+target machine to the internet via another machine with two network interfaces.
+The included script 'bridgesetup' was written to automate traffic forwarding,
+and with network bridging in place you can use a sniffer like wireshark to
+figure out which streams you want to intercept.
+
+8. Run the damn thing. You should now have -
+
+1 Public/Private Pair for your dummy authority (lets call them ca.cer and ca.key)
+1 semi compromised machine with your dummy public key in its trusted store
+1 CA file for outbound validation (lets call it browsercas.pem)
+1 Certificate template (tmpl.txt)
+1 list of interesting ports. In the example we'll use 80 as a plaintext TCP 
+  listener, 443 and 576 as TLS listener and 10576 for UDP.
+1 network interface you're interested in running on. 'mybr' if you used my
+  bridge script, otherwise 'eth0' or similar
+1 set of IP addresses that liar can chew through. It will open consecutive
+  addresses from the address given, up to x.x.x.254, make sure there's enough
+  room for all the servers you're likely to see connections for. We'll start with
+  10.1.1.50 here
+1 temporary directory name. Liar will use this during certificate generation,
+  ./certs used here
+
+Start liar like so -
+
+python dnsliar.py -r ca.cer -k ca.key -t tmpl.txt -c browsercas.pem -i mybr -a 10.1.1.50 -d ./certs -p 80 -s 443 -s 576 -u 10576
+
+
+You can add as many -p -s and -u terms as you like for more ports.
+
+The certs directory will fill up with certificates and templates for each server
+encountered. A 'logs' directory ought to appear (you may need to create it).
+If there's much traffic these will get big, fast, as they're hexdumps and ascii
+representations of all traffic. I think you get most of it twice due to logging
+of pre and post 'edit' traffic, and you'll get a log file per-connection.
+
+
+-------------------------------------------------------------------------------
+Traffic editing
+-------------------------------------------------------------------------------
+
+If you look in the source of liarserver.py at class liarHTTPHandler you'll see
+some in-flight traffic editing methods. They are really, really simple string
+match/replace functions. I'm sure they slow the whole thing down horrifically.
+
+They only work on TCP streams, not UDP datagrams, and provide a simple way to
+change stuff like (for instance) HTTP headers on the fly. However they will
+be applied to ALL TCP traffic, encrypted or not, so use with caution.
+
+The '-n' switch is provided for situations where editing is the primary
+requirement, and switches off all logging.
