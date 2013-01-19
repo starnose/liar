@@ -31,7 +31,7 @@ There are probably better ways to achieve much of what's going on here by going
 below the transport layer, that may avoid the use of multiple IP addresses and
 fake network interfaces, but what the hey, it's the first model I thought of.
 
-It's not *that* clever. it needs you to tell it what's an SSL port what's not
+It's not *that* clever. It needs you to tell it what's an SSL port what's not.
 Detecting this would probably be easy but it's not implemented. It's also not
 that well written, this is a hacky side-project and (I would like to stress)
 not representative of my enterprise-grade day-job coding.
